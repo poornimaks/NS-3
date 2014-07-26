@@ -64,14 +64,7 @@ private:
   virtual Ptr<Packet> DoDequeue (void);
   virtual Ptr<const Packet> DoPeek (void) const;
 
-  struct queue
-  {
-    Ptr<Packet> p;
-    double arr_time;
-    double exp_leave_time;
-    double prev_leave_time;     
-  };
-  std::deque<struct queue> m_packets;
+  std::queue<Ptr<Packet> > m_packets;
   uint32_t m_maxPackets;
   uint32_t m_maxBytes;
   uint32_t m_bytesInQueue;

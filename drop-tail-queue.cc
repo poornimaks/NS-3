@@ -20,7 +20,7 @@
 #include "ns3/enum.h"
 #include "ns3/uinteger.h"
 #include "drop-tail-queue.h"
-#include "ns3/simulator.h"
+
 NS_LOG_COMPONENT_DEFINE ("DropTailQueue");
 
 namespace ns3 {
@@ -84,8 +84,6 @@ DropTailQueue::GetMode (void)
 bool 
 DropTailQueue::DoEnqueue (Ptr<Packet> p)
 {
-	struct queue temp;
-	
   NS_LOG_FUNCTION (this << p);
 
   if (m_mode == QUEUE_MODE_PACKETS && (m_packets.size () >= m_maxPackets))
@@ -103,100 +101,8 @@ DropTailQueue::DoEnqueue (Ptr<Packet> p)
     }
 
   m_bytesInQueue += p->GetSize ();
-  
-  //getting the previous exp leave time
-  
-  temp.p=p;
-  temp.arr_time=Simulator::Now().GetSeconds();
-  //need to get bit rate!!
-  temp.exp_leave_time=temp.arr_time+p->GetSize()/1;
-  //m_packets.push_back (temp);
+  m_packets.push (p);
 
-//now insert it into the apt position
-
-std::deque<struct queue>::iterator it=m_packets.begin();
-NS_LOG_UNCOND("size of arrived packet:"<<p->GetSize()<<" queue size: "<<m_packets.size()<<" arrival time"<<Simulator::Now().GetSeconds());
-
-if(!m_packets.empty())
-{
-	
-	struct queue temp2;int pos=0;
-	for (it=m_packets.begin(); it!=m_packets.end(); ++it,pos++)
-	{
-		temp2=*it;
-	//	NS_LOG_UNCOND(temp2.exp_leave_time);NS_LOG_UNCOND(temp2.prev_leave_time);NS_LOG_UNCOND(temp.exp_leave_time);
-		if(temp2.exp_leave_time>temp.exp_leave_time&&temp.exp_leave_time>temp2.prev_leave_time)
-		{
-			
-			break;
-		}
-		
-	}
-	//NS_LOG_UNCOND("insertd after this one");
-//	if(pos==1)
-	//{
-		//temp2=*it;
-	//	NS_LOG_UNCOND("+1");
-	    temp.exp_leave_time=temp2.prev_leave_time+temp.p->GetSize();
-		temp.prev_leave_time=temp2.exp_leave_time;
-		//NS_LOG_UNCOND("update time of this prev leave one as"<<temp2.exp_leave_time);
-		it=m_packets.insert(it,temp);
-		//update
-		if(it!=m_packets.end()) // if u have another one next - check for single pack q
-		{
-			it++;
-			for(;it!=m_packets.end();it++,pos++)
-			{
-				temp2=*it;
-				temp2.prev_leave_time=m_packets.at(pos).exp_leave_time;
-			}
-		}
-		
-//	}
-	/*else
-	{
-		
-		temp2=*it;//NS_LOG_UNCOND(temp2.p->GetSize());
-		temp.prev_leave_time=temp2.exp_leave_time;
-		//NS_LOG_UNCOND("update time of this prev leave one as"<<temp2.exp_leave_time);
-		it=m_packets.insert(it-1,temp);
-		it++;
-		for(;it!=m_packets.end();it++,pos++)
-		{
-			temp2=*it;
-			temp2.prev_leave_time=m_packets.at(pos).exp_leave_time;
-		}
-	}
-   */
-}
-else
-{
-//NS_LOG_UNCOND("first push");	
-	temp.prev_leave_time=0;
-	m_packets.push_back(temp);
-}
-
-/*
-if(m_packets.size()==0)
-{
-	m_packets.insert(it,temp);
-}
-else 
-{
-	m_packets.insert(it-1,temp);
-}
-*/
-/*
-if(m_packets.size()!=0)
-  {
-	  temp.prev_leave_time=m_packets.back().exp_leave_time;
-  }
-  else
-  {
-	  
-  }
-  
-*/
   NS_LOG_LOGIC ("Number packets " << m_packets.size ());
   NS_LOG_LOGIC ("Number bytes " << m_bytesInQueue);
 
@@ -206,7 +112,6 @@ if(m_packets.size()!=0)
 Ptr<Packet>
 DropTailQueue::DoDequeue (void)
 {
-	struct queue temp;
   NS_LOG_FUNCTION (this);
 
   if (m_packets.empty ())
@@ -214,21 +119,13 @@ DropTailQueue::DoDequeue (void)
       NS_LOG_LOGIC ("Queue empty");
       return 0;
     }
-    
-    
-   temp= m_packets.front ();
-  Ptr<Packet> p =temp.p;
-  m_packets.pop_front ();
-  //update prev_leave_time
-  if(!m_packets.empty())
-  {
-	  m_packets.front().prev_leave_time=Simulator::Now().GetSeconds();
-	 // NS_LOG_UNCOND(" updated leave time of prev"<<m_packets.front().prev_leave_time);
-  }
+
+  Ptr<Packet> p = m_packets.front ();
+  m_packets.pop ();
   m_bytesInQueue -= p->GetSize ();
-  
+
   NS_LOG_LOGIC ("Popped " << p);
-	
+
   NS_LOG_LOGIC ("Number packets " << m_packets.size ());
   NS_LOG_LOGIC ("Number bytes " << m_bytesInQueue);
 
@@ -238,7 +135,6 @@ DropTailQueue::DoDequeue (void)
 Ptr<const Packet>
 DropTailQueue::DoPeek (void) const
 {
-	struct queue temp;
   NS_LOG_FUNCTION (this);
 
   if (m_packets.empty ())
@@ -247,8 +143,8 @@ DropTailQueue::DoPeek (void) const
       return 0;
     }
 
- temp = m_packets.front ();
-Ptr<Packet> p =temp.p;
+  Ptr<Packet> p = m_packets.front ();
+
   NS_LOG_LOGIC ("Number packets " << m_packets.size ());
   NS_LOG_LOGIC ("Number bytes " << m_bytesInQueue);
 
